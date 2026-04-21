@@ -48,6 +48,38 @@ fi
 success "Running from correct directory: $SCRIPT_DIR"
 echo ""
 
+# ── Python checks ──────────────────────────────────────────────────────────
+info "--- Checking dependencies ---"
+
+if ! command -v python3 &>/dev/null; then
+    error "python3 is not installed."
+    echo ""
+    echo "Install it with your package manager:"
+    echo "  Ubuntu/Debian : sudo apt install python3 python3-pip"
+    echo "  macOS         : brew install python3"
+    echo "  Arch          : sudo pacman -S python"
+    exit 1
+fi
+success "python3 found: $(python3 --version)"
+
+# Map import name -> pip package name
+declare -A PIP_NAMES=( [requests]="requests" [jwt]="PyJWT" )
+MISSING_PACKAGES=()
+for import_name in "${!PIP_NAMES[@]}"; do
+    if ! python3 -c "import $import_name" &>/dev/null; then
+        MISSING_PACKAGES+=("${PIP_NAMES[$import_name]}")
+    fi
+done
+if [[ ${#MISSING_PACKAGES[@]} -gt 0 ]]; then
+    error "Missing Python packages: ${MISSING_PACKAGES[*]}"
+    echo ""
+    echo "Install them with:"
+    echo "  pip3 install ${MISSING_PACKAGES[*]}"
+    exit 1
+fi
+success "Required Python packages present (requests, PyJWT)"
+echo ""
+
 # ── Step 2 — Create config/ ────────────────────────────────────────────────
 CONFIG_DIR="$SCRIPT_DIR/config"
 
