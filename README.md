@@ -59,11 +59,29 @@ The file should be a standard RSA private key in PEM format (begins with `-----B
 
 ### 4. Register the credential helper
 
-Add the following to `~/.gitconfig`, pointing to the absolute path of `get-token.sh`:
+Run the following command, replacing the path with the actual location of your clone:
+
+```bash
+git config --global credential.helper '/absolute/path/to/agent-environment/get-token.sh'
+```
+
+For example, if cloned to `~/claude/agent-environment`:
+
+```bash
+git config --global credential.helper '/home/karnet-dev-station/claude/agent-environment/get-token.sh'
+```
+
+This adds the following to `~/.gitconfig`:
 
 ```ini
 [credential]
     helper = /home/karnet-dev-station/claude/agent-environment/get-token.sh
+```
+
+To verify it was registered correctly:
+
+```bash
+git config --global credential.helper
 ```
 
 ## File structure
