@@ -63,7 +63,7 @@ fi
 success "python3 found: $(python3 --version)"
 
 # Map import name -> pip package name
-declare -A PIP_NAMES=( [requests]="requests" [jwt]="PyJWT" )
+declare -A PIP_NAMES=( [requests]="requests" [jwt]="PyJWT" [cryptography]="cryptography" )
 MISSING_PACKAGES=()
 for import_name in "${!PIP_NAMES[@]}"; do
     if ! python3 -c "import $import_name" &>/dev/null; then
@@ -77,7 +77,7 @@ if [[ ${#MISSING_PACKAGES[@]} -gt 0 ]]; then
     echo "  pip3 install ${MISSING_PACKAGES[*]}"
     exit 1
 fi
-success "Required Python packages present (requests, PyJWT)"
+success "Required Python packages present (requests, PyJWT, cryptography)"
 echo ""
 
 # ── Step 2 — Create config/ ────────────────────────────────────────────────

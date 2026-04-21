@@ -16,6 +16,14 @@ No token is stored on disk. A fresh one is generated on every git operation. If 
 
 ## Setup
 
+The install script requires Python 3 and the following packages:
+
+```bash
+pip3 install requests PyJWT cryptography
+```
+
+`cryptography` is a separate dependency required by PyJWT to handle RS256 signing — it is not pulled in automatically.
+
 Before running the install script, download a private key from your GitHub App's settings page and place it inside the `config/` folder (you may need to create it first):
 
 ```bash
