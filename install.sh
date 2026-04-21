@@ -77,7 +77,7 @@ info "--- GitHub App Client ID ---"
 echo "Found on your GitHub App's settings page under 'Client ID'."
 echo ""
 if [[ -n "$EXISTING_CLIENT_ID" ]]; then
-    echo "Current value: ${BOLD}$EXISTING_CLIENT_ID${RESET}"
+    echo -e "Current value: ${BOLD}$EXISTING_CLIENT_ID${RESET}"
     read -rp "Is this still correct? [Y/n] " confirm
     if [[ "$confirm" =~ ^[Nn]$ ]]; then
         EXISTING_CLIENT_ID=""
@@ -103,7 +103,7 @@ echo "before continuing. Download it from your GitHub App settings page."
 echo "Example filename: private-key.pem"
 echo ""
 if [[ -n "$EXISTING_KEY_NAME" ]]; then
-    echo "Current value: ${BOLD}$EXISTING_KEY_NAME${RESET}"
+    echo -e "Current value: ${BOLD}$EXISTING_KEY_NAME${RESET}"
     read -rp "Is this still correct? [Y/n] " confirm
     if [[ "$confirm" =~ ^[Nn]$ ]]; then
         EXISTING_KEY_NAME=""
