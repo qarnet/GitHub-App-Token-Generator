@@ -12,70 +12,37 @@ Scripts and configuration for authenticating as a GitHub App to obtain short-liv
 4. Exchanges the JWT for a short-lived installation access token
 5. Prints `username=x-access-token` and `password=<token>` — the format git expects
 
-No token is stored on disk. A fresh one is generated on every git operation. If anything goes wrong (missing config, bad key, API error), an error is printed to stderr and git surfaces it as a credential failure.
+No token is stored on disk. A fresh one is generated on every git operation. If anything goes wrong (missing config, bad key, API error), an error is printed to stderr and git surfaces it as a clear failure message.
 
 ## Setup
 
-### 1. Create the config folder
-
-The `config/` folder is excluded from version control via `.gitignore`. Create it and lock down its permissions so only your user can read the private key:
+Before running the install script, download a private key from your GitHub App's settings page and place it inside the `config/` folder (you may need to create it first):
 
 ```bash
-mkdir config
-chmod 700 config
+mkdir -p config
+cp ~/Downloads/your-private-key.pem config/private-key.pem
 ```
 
-### 2. Add `environment.json`
-
-Create `config/environment.json` with the following structure:
-
-```json
-{
-  "client_id": "<your-github-app-client-id>",
-  "private_key_path": "config/private-key.pem"
-}
-```
-
-| Key | Description |
-|---|---|
-| `client_id` | The Client ID of your GitHub App (found under the App's settings page) |
-| `private_key_path` | Path to the private key file — relative to the repo root, or absolute |
-
-### 3. Add the private key
-
-Download a private key from your GitHub App's settings page and save it as `config/private-key.pem`, then restrict its permissions:
-
-```bash
-# save the downloaded .pem file as config/private-key.pem, then:
-chmod 600 config/private-key.pem
-```
-
-The file should be a standard RSA private key in PEM format (begins with `-----BEGIN RSA PRIVATE KEY-----`).
-
-### 4. Register the credential helper
-
-Run the install script from inside the repo:
+Then run the install script from the repo root:
 
 ```bash
 ./install.sh
 ```
 
-This registers the credential helper **scoped to `https://github.com`** only, by adding the following to `~/.gitconfig`:
+The script will walk you through the following steps interactively:
 
-```ini
-[credential "https://github.com"]
-    helper = /absolute/path/to/agent-environment/get-token.sh
-```
+1. Verify it is being run from the correct directory
+2. Create `config/` if it does not already exist
+3. Ask for your GitHub App **Client ID** (found on the App's settings page)
+4. Ask for the **private key filename** inside `config/` and verify it exists
+5. Write `config/environment.json` and ask you to confirm the contents
+6. Apply secure permissions (`chmod 700` on `config/`, `chmod 600` on the key and JSON)
+7. Register the credential helper in `~/.gitconfig` scoped to `https://github.com`
+8. Run a smoke test to confirm a token can be obtained end-to-end
 
-To verify it was registered correctly:
+### Why scoped to `https://github.com`?
 
-```bash
-git config --global credential.https://github.com.helper
-```
-
-#### Why scoped instead of global?
-
-A global `credential.helper` fires for every remote, regardless of host — GitHub, GitLab, Bitbucket, self-hosted servers, everything. That means this GitHub App token would be sent to all of them, and any other credential helpers you have configured (e.g. a personal PAT for GitLab) would be silently overridden.
+A global `credential.helper` fires for every remote regardless of host — GitHub, GitLab, Bitbucket, self-hosted servers, everything. Any other credential helpers you have configured would be silently overridden.
 
 Scoping with `credential.https://github.com.helper` makes the helper activate only when git is authenticating against `https://github.com`. For any other host, git falls through to the next configured helper or prompts you normally. This lets you stack independent helpers per host:
 
@@ -92,16 +59,40 @@ Scoping with `credential.https://github.com.helper` makes the helper activate on
 
 Each helper only sees requests for its matching URL prefix and is completely independent of the others.
 
+## Manual config reference
+
+If you need to set up or modify `config/environment.json` by hand:
+
+```json
+{
+  "client_id": "<your-github-app-client-id>",
+  "private_key_path": "config/private-key.pem"
+}
+```
+
+| Key | Description |
+|---|---|
+| `client_id` | The Client ID of your GitHub App (found under the App's settings page) |
+| `private_key_path` | Path to the private key file — relative to the repo root, or absolute |
+
+Permissions should be set as follows:
+
+```bash
+chmod 700 config/
+chmod 600 config/private-key.pem
+chmod 600 config/environment.json
+```
+
 ## File structure
 
 ```
 agent-environment/
 ├── get-token.sh       # Credential helper entry point (called by git)
 ├── token-gen.py       # Generates the installation token via GitHub API
-├── install.sh         # Registers the credential helper in ~/.gitconfig
+├── install.sh         # Interactive setup script
 ├── .gitignore         # Excludes config/ from version control
 ├── README.md
-└── config/            # NOT committed — create manually
+└── config/            # NOT committed — created by install.sh
     ├── environment.json   # GitHub App client_id + private key path
     └── private-key.pem    # GitHub App private key (downloaded from App settings)
 ```
