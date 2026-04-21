@@ -59,18 +59,41 @@ else
 fi
 echo ""
 
+# ── Read existing environment.json if present ─────────────────────────────
+ENV_FILE="$CONFIG_DIR/environment.json"
+EXISTING_CLIENT_ID=""
+EXISTING_KEY_NAME=""
+
+if [[ -f "$ENV_FILE" ]]; then
+    warn "config/environment.json already exists — checking existing values."
+    echo ""
+    EXISTING_CLIENT_ID=$(python3 -c "import json; d=json.load(open('$ENV_FILE')); print(d.get('client_id',''))" 2>/dev/null || echo "")
+    EXISTING_KEY_PATH=$(python3 -c "import json; d=json.load(open('$ENV_FILE')); print(d.get('private_key_path',''))" 2>/dev/null || echo "")
+    EXISTING_KEY_NAME=$(basename "$EXISTING_KEY_PATH")
+fi
+
 # ── Step 3 — Client ID ─────────────────────────────────────────────────────
 info "--- GitHub App Client ID ---"
 echo "Found on your GitHub App's settings page under 'Client ID'."
 echo ""
-while true; do
-    read -rp "Client ID: " CLIENT_ID
-    CLIENT_ID="${CLIENT_ID// /}"   # strip whitespace
-    if [[ -n "$CLIENT_ID" ]]; then
-        break
+if [[ -n "$EXISTING_CLIENT_ID" ]]; then
+    echo "Current value: ${BOLD}$EXISTING_CLIENT_ID${RESET}"
+    read -rp "Is this still correct? [Y/n] " confirm
+    if [[ "$confirm" =~ ^[Nn]$ ]]; then
+        EXISTING_CLIENT_ID=""
     fi
-    error "Client ID cannot be empty. Please try again."
-done
+fi
+if [[ -z "$EXISTING_CLIENT_ID" ]]; then
+    while true; do
+        read -rp "Client ID: " CLIENT_ID
+        CLIENT_ID="${CLIENT_ID// /}"
+        [[ -n "$CLIENT_ID" ]] && break
+        error "Client ID cannot be empty. Please try again."
+    done
+else
+    CLIENT_ID="$EXISTING_CLIENT_ID"
+    success "Keeping existing Client ID: $CLIENT_ID"
+fi
 echo ""
 
 # ── Step 4 — Private key filename ─────────────────────────────────────────
@@ -79,25 +102,42 @@ echo "The private key file must already be placed inside config/"
 echo "before continuing. Download it from your GitHub App settings page."
 echo "Example filename: private-key.pem"
 echo ""
-while true; do
-    read -rp "Private key filename (inside config/): " KEY_NAME
-    KEY_NAME="${KEY_NAME// /}"
-    if [[ -z "$KEY_NAME" ]]; then
-        error "Filename cannot be empty. Please try again."
-        continue
+if [[ -n "$EXISTING_KEY_NAME" ]]; then
+    echo "Current value: ${BOLD}$EXISTING_KEY_NAME${RESET}"
+    read -rp "Is this still correct? [Y/n] " confirm
+    if [[ "$confirm" =~ ^[Nn]$ ]]; then
+        EXISTING_KEY_NAME=""
     fi
+fi
+if [[ -z "$EXISTING_KEY_NAME" ]]; then
+    while true; do
+        read -rp "Private key filename (inside config/): " KEY_NAME
+        KEY_NAME="${KEY_NAME// /}"
+        if [[ -z "$KEY_NAME" ]]; then
+            error "Filename cannot be empty. Please try again."
+            continue
+        fi
+        KEY_PATH="$CONFIG_DIR/$KEY_NAME"
+        if [[ ! -f "$KEY_PATH" ]]; then
+            error "File not found: $KEY_PATH"
+            error "Copy your private key into config/ and then re-enter the filename."
+            continue
+        fi
+        break
+    done
+else
+    KEY_NAME="$EXISTING_KEY_NAME"
     KEY_PATH="$CONFIG_DIR/$KEY_NAME"
     if [[ ! -f "$KEY_PATH" ]]; then
-        error "File not found: $KEY_PATH"
-        error "Copy your private key into config/ and then re-enter the filename."
-        continue
+        error "Expected key file not found: $KEY_PATH"
+        error "Copy your private key into config/ and re-run."
+        exit 1
     fi
-    break
-done
+    success "Keeping existing private key: $KEY_NAME"
+fi
 echo ""
 
 # ── Step 5 — Write environment.json ───────────────────────────────────────
-ENV_FILE="$CONFIG_DIR/environment.json"
 cat > "$ENV_FILE" <<EOF
 {
   "client_id": "$CLIENT_ID",
