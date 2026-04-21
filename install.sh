@@ -129,6 +129,8 @@ echo ""
 # ── Step 7 — Register credential helper ───────────────────────────────────
 info "--- Registering git credential helper ---"
 HELPER="$SCRIPT_DIR/get-token.sh"
+chmod +x "$HELPER"
+success "chmod +x get-token.sh"
 git config --global "credential.https://github.com.helper" "$HELPER"
 success "Registered: credential.https://github.com.helper = $HELPER"
 echo ""
