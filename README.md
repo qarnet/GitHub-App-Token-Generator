@@ -1,4 +1,4 @@
-# agent-environment
+# GitHub-App-Token-Generator
 
 Scripts and configuration for authenticating as a GitHub App to obtain short-lived installation tokens, used as a git credential helper.
 
@@ -6,7 +6,7 @@ Scripts and configuration for authenticating as a GitHub App to obtain short-liv
 
 `get-token.sh` is registered as a git credential helper in `~/.gitconfig`. On every `git push` or `git pull`, git invokes the helper. `get-token.sh` runs `token-gen.py`, which:
 
-1. Checks `~/.cache/agent-environment/token.json` — if a valid token exists with more than 5 minutes remaining, it is used immediately with no API calls
+1. Checks `~/.cache/github-app-token-generator/token.json` — if a valid token exists with more than 5 minutes remaining, it is used immediately with no API calls
 2. Otherwise: reads `config/environment.json`, signs a short-lived JWT with the App's private key, fetches a new installation token from the GitHub API, writes it to the cache, and prints the credentials
 
 GitHub installation tokens are valid for 1 hour. The cache means the API is only called when a token actually needs refreshing — roughly once per hour regardless of how many git operations happen in that window.
@@ -56,7 +56,7 @@ Scoping with `credential.https://github.com.helper` makes the helper activate on
 
 ```ini
 [credential "https://github.com"]
-    helper = /path/to/agent-environment/get-token.sh   # GitHub App token
+    helper = /path/to/GitHub-App-Token-Generator/get-token.sh   # GitHub App token
 
 [credential "https://gitlab.com"]
     helper = /path/to/some-other-helper.sh             # different auth
@@ -94,7 +94,7 @@ chmod 600 config/environment.json
 ## File structure
 
 ```
-agent-environment/
+GitHub-App-Token-Generator/
 ├── get-token.sh               # Credential helper entry point (called by git)
 ├── token-gen.py               # Fetches token (cached) and prints credentials
 ├── discover-installation.py   # Interactive installation selector (called by install.sh)
@@ -104,12 +104,12 @@ agent-environment/
 ├── config/                    # NOT committed — created by install.sh
 │   ├── environment.json       # GitHub App client_id + private key path
 │   └── private-key.pem        # GitHub App private key (downloaded from App settings)
-└── ~/.cache/agent-environment/    # Created automatically by token-gen.py
+└── ~/.cache/github-app-token-generator/    # Created automatically by token-gen.py
     └── token.json                 # Cached token + expiry + installation_id
 ```
 
 To clear the token cache (forces a fresh token on next git operation):
 
 ```bash
-rm ~/.cache/agent-environment/token.json
+rm ~/.cache/github-app-token-generator/token.json
 ```

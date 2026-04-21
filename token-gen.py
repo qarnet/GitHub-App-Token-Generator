@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 CONFIG_PATH   = Path(__file__).parent / 'config' / 'environment.json'
-CACHE_DIR     = Path.home() / '.cache' / 'agent-environment'
+CACHE_DIR     = Path.home() / '.cache' / 'github-app-token-generator'
 CACHE_FILE    = CACHE_DIR / 'token.json'
 EXPIRY_BUFFER = 300  # seconds — refresh token 5 minutes before it expires
 

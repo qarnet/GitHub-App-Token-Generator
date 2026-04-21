@@ -31,7 +31,7 @@ echo ""
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 if [[ ! -f "$SCRIPT_DIR/token-gen.py" || ! -f "$SCRIPT_DIR/get-token.sh" ]]; then
-    error "This script must be run from inside the agent-environment repository."
+    error "This script must be run from inside the GitHub-App-Token-Generator repository."
     error "Expected to find token-gen.py and get-token.sh in: $SCRIPT_DIR"
     exit 1
 fi

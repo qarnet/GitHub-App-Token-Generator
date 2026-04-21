@@ -15,7 +15,7 @@ import jwt
 from pathlib import Path
 
 CONFIG_PATH = Path(__file__).parent / 'config' / 'environment.json'
-CACHE_DIR   = Path.home() / '.cache' / 'agent-environment'
+CACHE_DIR   = Path.home() / '.cache' / 'github-app-token-generator'
 CACHE_FILE  = CACHE_DIR / 'token.json'
 
 
