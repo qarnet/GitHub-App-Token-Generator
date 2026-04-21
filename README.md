@@ -6,13 +6,12 @@ Scripts and configuration for authenticating as a GitHub App to obtain short-liv
 
 `get-token.sh` is registered as a git credential helper in `~/.gitconfig`. On every `git push` or `git pull`, git invokes the helper. `get-token.sh` runs `token-gen.py`, which:
 
-1. Reads the GitHub App credentials from `config/environment.json`
-2. Signs a short-lived JWT with the App's private key
-3. Calls the GitHub API to retrieve the installation ID
-4. Exchanges the JWT for a short-lived installation access token
-5. Prints `username=x-access-token` and `password=<token>` — the format git expects
+1. Checks `~/.cache/agent-environment/token.json` — if a valid token exists with more than 5 minutes remaining, it is used immediately with no API calls
+2. Otherwise: reads `config/environment.json`, signs a short-lived JWT with the App's private key, fetches a new installation token from the GitHub API, writes it to the cache, and prints the credentials
 
-No token is stored on disk. A fresh one is generated on every git operation. If anything goes wrong (missing config, bad key, API error), an error is printed to stderr and git surfaces it as a clear failure message.
+GitHub installation tokens are valid for 1 hour. The cache means the API is only called when a token actually needs refreshing — roughly once per hour regardless of how many git operations happen in that window.
+
+If anything goes wrong (missing config, bad key, API error), an error is printed to stderr and git surfaces it as a clear failure message.
 
 ## Setup
 
@@ -39,14 +38,15 @@ Then run the install script from the repo root:
 
 The script will walk you through the following steps interactively:
 
-1. Verify it is being run from the correct directory
+1. Verify it is being run from the correct directory and that Python dependencies are present
 2. Create `config/` if it does not already exist
 3. Ask for your GitHub App **Client ID** (found on the App's settings page)
 4. Ask for the **private key filename** inside `config/` and verify it exists
 5. Write `config/environment.json` and ask you to confirm the contents
-6. Apply secure permissions (`chmod 700` on `config/`, `chmod 600` on the key and JSON)
-7. Register the credential helper in `~/.gitconfig` scoped to `https://github.com`
-8. Run a smoke test to confirm a token can be obtained end-to-end
+6. Discover installations for the GitHub App — auto-selects if there is only one; prompts you to choose if there are multiple; caches the result so the API is not called on every git operation
+7. Apply secure permissions (`chmod 700` on `config/`, `chmod 600` on the key and JSON, `chmod 750` on `get-token.sh`)
+8. Register the credential helper in `~/.gitconfig` scoped to `https://github.com`
+9. Run a smoke test to confirm a token can be obtained end-to-end
 
 ### Why scoped to `https://github.com`?
 
@@ -95,12 +95,21 @@ chmod 600 config/environment.json
 
 ```
 agent-environment/
-├── get-token.sh       # Credential helper entry point (called by git)
-├── token-gen.py       # Generates the installation token via GitHub API
-├── install.sh         # Interactive setup script
-├── .gitignore         # Excludes config/ from version control
+├── get-token.sh               # Credential helper entry point (called by git)
+├── token-gen.py               # Fetches token (cached) and prints credentials
+├── discover-installation.py   # Interactive installation selector (called by install.sh)
+├── install.sh                 # Interactive setup wizard
+├── .gitignore                 # Excludes config/ from version control
 ├── README.md
-└── config/            # NOT committed — created by install.sh
-    ├── environment.json   # GitHub App client_id + private key path
-    └── private-key.pem    # GitHub App private key (downloaded from App settings)
+├── config/                    # NOT committed — created by install.sh
+│   ├── environment.json       # GitHub App client_id + private key path
+│   └── private-key.pem        # GitHub App private key (downloaded from App settings)
+└── ~/.cache/agent-environment/    # Created automatically by token-gen.py
+    └── token.json                 # Cached token + expiry + installation_id
+```
+
+To clear the token cache (forces a fresh token on next git operation):
+
+```bash
+rm ~/.cache/agent-environment/token.json
 ```

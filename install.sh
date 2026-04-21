@@ -22,9 +22,10 @@ echo "  1. Create a config/ folder in the current directory"
 echo "  2. Ask for your GitHub App Client ID"
 echo "  3. Ask for your private key filename (must already be in config/)"
 echo "  4. Write config/environment.json"
-echo "  5. Apply secure file permissions to config/"
-echo "  6. Register the credential helper in ~/.gitconfig (scoped to github.com)"
-echo "  7. Run a smoke test to verify everything works"
+echo "  5. Discover and select the GitHub App installation"
+echo "  6. Apply secure file permissions to config/"
+echo "  7. Register the credential helper in ~/.gitconfig (scoped to github.com)"
+echo "  8. Run a smoke test to verify everything works"
 echo ""
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -188,6 +189,17 @@ if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
 fi
 echo ""
 
+# ── Step 5b — Discover installation ID ────────────────────────────────────
+info "--- GitHub App Installation ---"
+echo "Looking up installations for this GitHub App..."
+echo ""
+if ! python3 "$SCRIPT_DIR/discover-installation.py"; then
+    error "Failed to discover installation ID."
+    error "Check your Client ID and private key, then re-run."
+    exit 1
+fi
+echo ""
+
 # ── Step 6 — Permissions ───────────────────────────────────────────────────
 info "--- Applying permissions ---"
 chmod 700 "$CONFIG_DIR"
@@ -201,8 +213,8 @@ echo ""
 # ── Step 7 — Register credential helper ───────────────────────────────────
 info "--- Registering git credential helper ---"
 HELPER="$SCRIPT_DIR/get-token.sh"
-chmod +x "$HELPER"
-success "chmod +x get-token.sh"
+chmod 750 "$HELPER"
+success "chmod 750 get-token.sh"
 git config --global "credential.https://github.com.helper" "$HELPER"
 success "Registered: credential.https://github.com.helper = $HELPER"
 echo ""
