@@ -100,8 +100,8 @@ EXISTING_KEY_NAME=""
 if [[ -f "$ENV_FILE" ]]; then
     warn "config/environment.json already exists — checking existing values."
     echo ""
-    EXISTING_CLIENT_ID=$(python3 -c "import json; d=json.load(open('$ENV_FILE')); print(d.get('client_id',''))" 2>/dev/null || echo "")
-    EXISTING_KEY_PATH=$(python3 -c "import json; d=json.load(open('$ENV_FILE')); print(d.get('private_key_path',''))" 2>/dev/null || echo "")
+    EXISTING_CLIENT_ID=$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d.get('client_id',''))" "$ENV_FILE" 2>/dev/null || echo "")
+    EXISTING_KEY_PATH=$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d.get('private_key_path',''))" "$ENV_FILE" 2>/dev/null || echo "")
     EXISTING_KEY_NAME=$(basename "$EXISTING_KEY_PATH")
 fi
 
@@ -120,8 +120,15 @@ if [[ -z "$EXISTING_CLIENT_ID" ]]; then
     while true; do
         read -rp "Client ID: " CLIENT_ID
         CLIENT_ID="${CLIENT_ID// /}"
-        [[ -n "$CLIENT_ID" ]] && break
-        error "Client ID cannot be empty. Please try again."
+        if [[ -z "$CLIENT_ID" ]]; then
+            error "Client ID cannot be empty. Please try again."
+            continue
+        fi
+        if [[ ! "$CLIENT_ID" =~ ^Iv1\. ]]; then
+            error "Client ID must start with 'Iv1.' — please check your GitHub App settings."
+            continue
+        fi
+        break
     done
 else
     CLIENT_ID="$EXISTING_CLIENT_ID"
@@ -171,12 +178,13 @@ fi
 echo ""
 
 # ── Step 5 — Write environment.json ───────────────────────────────────────
-cat > "$ENV_FILE" <<EOF
-{
-  "client_id": "$CLIENT_ID",
-  "private_key_path": "config/$KEY_NAME"
-}
-EOF
+python3 -c "
+import json, sys
+json.dump({
+    'client_id': sys.argv[1],
+    'private_key_path': f'config/{sys.argv[2]}',
+}, open(sys.argv[3], 'w'), indent=2)
+" "$CLIENT_ID" "$KEY_NAME" "$ENV_FILE"
 
 info "--- Review environment.json ---"
 echo ""

@@ -18,6 +18,12 @@ If anything goes wrong (missing config, bad key, API error), an error is printed
 The install script requires Python 3 and the following packages:
 
 ```bash
+pip3 install -r requirements.txt
+```
+
+Or install manually:
+
+```bash
 pip3 install requests PyJWT cryptography
 ```
 

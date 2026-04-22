@@ -1,5 +1,4 @@
-"""
-Interactive GitHub App installation discovery — called by install.sh.
+"""Interactive GitHub App installation discovery — called by install.sh.
 
 Lists all installations for the configured GitHub App. If there is only
 one, selects it automatically. If there are multiple, prompts the user
@@ -9,54 +8,26 @@ token-gen.py can use it on every subsequent run without hitting the API.
 import json
 import os
 import sys
-import time
-import requests
+
 import jwt
-from pathlib import Path
+import requests
 
-CONFIG_PATH = Path(__file__).parent / 'config' / 'environment.json'
-CACHE_DIR   = Path.home() / '.cache' / 'github-app-token-generator'
-CACHE_FILE  = CACHE_DIR / 'token.json'
-
-
-def load_config():
-    if not CONFIG_PATH.exists():
-        raise FileNotFoundError(f'Config not found: {CONFIG_PATH}')
-    return json.loads(CONFIG_PATH.read_text())
-
-
-def make_jwt(config):
-    key_path = Path(config['private_key_path'])
-    if not key_path.is_absolute():
-        key_path = Path(__file__).parent / key_path
-    if not key_path.exists():
-        raise FileNotFoundError(f'Private key not found: {key_path}')
-    private_key = key_path.read_text()
-    now = int(time.time())
-    return jwt.encode(
-        {'iat': now - 60, 'exp': now + 600, 'iss': config['client_id'].strip()},
-        private_key, algorithm='RS256')
-
-
-def get_installations(jwt_token):
-    resp = requests.get(
-        'https://api.github.com/app/installations',
-        headers={'Authorization': f'Bearer {jwt_token}', 'Accept': 'application/vnd.github+json'},
-        timeout=10)
-    resp.raise_for_status()
-    return resp.json()
+from github_app_auth import (
+    load_config,
+    load_cache,
+    save_cache,
+    make_jwt,
+    get_installations,
+)
 
 
 def write_installation_id(installation_id):
-    CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    os.chmod(CACHE_DIR, 0o700)
     try:
-        cache = json.loads(CACHE_FILE.read_text())
-    except Exception:
+        cache = load_cache()
+    except (OSError, json.JSONDecodeError):
         cache = {}
     cache['installation_id'] = installation_id
-    CACHE_FILE.write_text(json.dumps(cache, indent=2))
-    os.chmod(CACHE_FILE, 0o600)
+    save_cache(cache)
 
 
 def fmt_installation(inst):
@@ -103,12 +74,21 @@ try:
 except FileNotFoundError as e:
     print(f'error: {e}', file=sys.stderr)
     sys.exit(1)
+except json.JSONDecodeError as e:
+    print(f'error: failed to parse environment.json — {e}', file=sys.stderr)
+    sys.exit(1)
+except KeyError as e:
+    print(f'error: missing required config key — {e}', file=sys.stderr)
+    sys.exit(1)
+except jwt.PyJWTError as e:
+    print(f'error: JWT signing failed — {e}', file=sys.stderr)
+    sys.exit(1)
 except requests.HTTPError as e:
     print(f'error: GitHub API request failed — {e}', file=sys.stderr)
     sys.exit(1)
 except requests.ConnectionError:
     print('error: could not reach GitHub API — check your network connection', file=sys.stderr)
     sys.exit(1)
-except Exception as e:
-    print(f'error: {type(e).__name__}: {e}', file=sys.stderr)
+except OSError as e:
+    print(f'error: OS error — {e}', file=sys.stderr)
     sys.exit(1)
