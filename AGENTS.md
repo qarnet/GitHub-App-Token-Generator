@@ -10,18 +10,18 @@ Small Python/bash tooling repo: a git credential helper that authenticates to Gi
 - **`install.sh`** — Interactive setup wizard. Requires human input; do not run unattended.
 
 ## Architecture
-- Two Python scripts (`token-gen.py`, `discover-installation.py`) duplicate JWT and config logic.
-- `config/environment.json` holds `client_id` and `private_key_path`.
+- **`github_app_auth.py`** — Shared module with `load_config()`, `make_jwt()`, `get_installations()`, `load_cache()`, `save_cache()`, and constants. Both `token-gen.py` and `discover-installation.py` import from it.
+- `config/environment.json` holds `client_id`, `private_key_path`, and optionally `installation_id`.
 - Private key PEM lives inside `config/` (not committed; `config/` is gitignored).
 - Token cache lives at `~/.cache/github-app-token-generator/token.json`.
 
 ## Dependencies
-No `requirements.txt` or packaging yet. Runtime deps (checked by `install.sh`):
+Runtime deps are listed in `requirements.txt` (also checked by `install.sh`):
 - `requests`
 - `PyJWT`
 - `cryptography`
 
-Install manually: `pip3 install requests PyJWT cryptography`
+Install: `pip3 install -r requirements.txt`
 
 ## Safe Defaults
 - All API requests go to `https://api.github.com` (no Enterprise support yet).
